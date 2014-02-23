@@ -1,13 +1,23 @@
 package dcc
 
 class Judge extends SecUser {
-	Submission submission
 	
 	static hasMany = [ranks:Rank]
 	
     static constraints = {
-		submission nullable:true
     }
+	def beforeInsert() {
+		encodePassword()
+	}
 
+	def beforeUpdate() {
+		if (isDirty('password')) {
+			encodePassword()
+		}
+	}
+
+	protected void encodePassword() {
+		password = springSecurityService.encodePassword(password)
+	}
 	String toString(){"$firstName $lastName"}
 }

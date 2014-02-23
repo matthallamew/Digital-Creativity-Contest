@@ -4,9 +4,8 @@ import grails.plugins.springsecurity.Secured;
 import org.springframework.dao.DataIntegrityViolationException
 
 class JudgeController {
+	def judgeService
 
-	def springSecurityService
-	def grailsApplication
     static allowedMethods = [save: "POST", update: "POST", delete: "POST"]
 
 	/*
@@ -16,16 +15,13 @@ class JudgeController {
 	 */
     @Secured(['ROLE_ADMIN','ROLE_JUDGE'])
 	def index() {
-		def user = getUser()
-		def cutOffDate = grailsApplication.config.cutOffDate
-		def submissions = Submission.countByDateCreatedLessThanEquals(cutOffDate)
-		def sub = (submissions <= 0) ? "There are $submissions Submissions total." : (submissions > 1) ? "There are $submissions Submissions total." : "There is $submissions Submission total."
-		//Find all submissions that the currently logged in judge has not ranked.
-		//THANK YOU ALLISON JANSEN!  I could not figure out this simple query; I had thought about it too long/hard.
-		def unrankedSubs = Submission.executeQuery("SELECT s FROM Submission s WHERE s.dateCreated <= ? AND s NOT IN(SELECT r.submissions FROM Rank r WHERE r.judges = ?)",[cutOffDate,user])		
-		def unrankedSubmission = unrankedSubs.size()
-		def unsub = (unrankedSubmission <= 0) ? "You have not ranked $unrankedSubmission Submissions." : (submissions > 1) ? "You have not ranked $unrankedSubmission Submissions." : "You have not ranked $unrankedSubmission Submission."
-		[submissionsText:sub,unrankedSubmissionsText:unsub]
+		def result = judgeService.index()
+		if(!result.error){
+			return [submissionsText:result.sub,unrankedSubmissionsText:result.unsub]
+		}
+		flash.message = message(code: result.error.code,args:result.error.args)
+		redirect(url:'/')
+		return
     }
 
 	/*
@@ -33,32 +29,32 @@ class JudgeController {
 	 * Display them in a list view for him or her to rank.
 	 */
 	@Secured(['ROLE_JUDGE','ROLE_ADMIN'])
-	def unrankedSubmissions(Integer max) {
-		def user = getUser()
-		def cutOffDate = grailsApplication.config.cutOffDate
-		//find all submissions that the currently logged in judge has not ranked
-		def submissionsList = Submission.executeQuery("SELECT s FROM Submission s WHERE s.dateCreated <= ? AND s NOT IN(SELECT r.submissions FROM Rank r WHERE r.judges = ?)",[cutOffDate,user])
-
-		params.max = Math.min(max ?: 10, 100)
-		[submissionInstanceList: submissionsList]
+	def unrankedSubmissions() {
+		def result = judgeService.unrankedSubmissions()
+		if(!result.error){
+			return [submissionInstanceList: result.submissionsList]
+		}
+		flash.message = message(code: result.error.code, args: result.error.args)
+		redirect(action: 'index')
+		return
 	}
 
 	/*
 	 * A judge clicks on a submission to rank it.
+	 * rankSubmission is called in judgeService.
 	 * If the submission is found, it is returned.
 	 * It is shown on a new page along with the judging form for the judge to rank the submission.
 	 * If it is not found, the judge is taken back to the list of unranked submissions and notified that it could not be found
 	 */
     @Secured(['ROLE_JUDGE','ROLE_ADMIN'])
 	def rankSubmission(Long id) {
-		def rankInstance = new Rank()
-		def submissionInstance = Submission.get(id)
-		if (!submissionInstance) {
-			flash.message = message(code: 'default.not.found.message', args: [message(code: 'submission.label', default: 'Submission'), id])
-			redirect(action: "unrankedSubmissions")
-			return
+		def result = judgeService.rankSubmission(id)
+		if(!result.error){
+			return [submissionInstance: result.submissionInstance,rankInstance:result.rankInstance]
 		}
-		[submissionInstance: submissionInstance,rankInstance:rankInstance]
+		flash.message = message(code: result.error.code, args: result.error.args)
+		redirect(action: "unrankedSubmissions")
+		return
 	}
 
 	/*
@@ -67,24 +63,24 @@ class JudgeController {
 	 * Add a reference to the submission that was being ranked to the rankInstance
 	 * Add a reference to the judge that did the ranking to the rankInstance.
 	 */
-    @Secured(['ROLE_JUDGE','ROLE_ADMIN'])
+	@Secured(['ROLE_JUDGE','ROLE_ADMIN'])
 	def saveRank(){
-		def user = getUser()
-		def rankInstance = new Rank(params)
-		def submission = Submission.get(params.submissionId)
-		rankInstance.submissions = submission
-		if(user){
-			rankInstance.judges = user
-		}
-		
-		if (!rankInstance.save(flush:true)) {
-			flash.message = "Woops, couldn't save."
-			render(view: "rankSubmission", model: [submissionInstance:submission,rankInstance: rankInstance])
+		try{
+			def result = judgeService.saveRank(params)
+			if(!result.error){
+				flash.message = message(code: 'default.created.message', args: [message(code: 'rank.label', default: 'Rank'), result.rankInstance.id])
+				redirect(action: "unrankedSubmissions")
+				return
+			}
+			flash.message = message(code: result.error.code, args: result.error.args)
+			render(view: "rankSubmission", model: [submissionInstance:Submission.get(params.submissionId),rankInstance: new Rank(params)])
 			return
 		}
-
-		flash.message = message(code: 'default.created.message', args: [message(code: 'rank.label', default: 'Rank'), rankInstance.id])
-		redirect(controller:"judge",action: "unrankedSubmissions")
+		catch(Exception e){
+			flash.message = message(code: "default.method.failure", args: ["Rank could not be created.","Verify correct data is being used in the fields below."])
+			render(view: "rankSubmission", model: [submissionInstance:Submission.get(params.submissionId),rankInstance: new Rank(params)])
+			return
+		}
 	}
 
 	/*
@@ -93,12 +89,18 @@ class JudgeController {
 	 */
     @Secured(['ROLE_ADMIN'])
 	def list(Integer max,Integer offset) {
-		params.max = Math.min(max ?: 10, 100)
-		params.offset = Math.min(offset ?: 0, 100)
-		def role = SecRole.findByAuthority("ROLE_JUDGE")
-		def susr = SecUserSecRole.findAllBySecRole(role, [max: params.max ?: 10,offset: params.offset ?: 0])
-		def susrCount = SecUserSecRole.countBySecRole(role)
-		[judgeInstanceList: susr.secUser, judgeInstanceTotal: susrCount]
+		def result = judgeService.list(max,offset,params)
+		if(result.judgeInstanceTotal == 0) {
+			flash.message = "No Judges found.  Create a new judge."
+			redirect(action:'create')
+			return
+		}
+		else if(!result.error){
+			return [judgeInstanceList: result.judgeInstanceList, judgeInstanceTotal: result.judgeInstanceTotal]
+		}
+		flash.message = message(code: result.error.code, args: result.error.args)
+		redirect(controller:'admin',action:'index')
+		return
 	}
 
 	/*
@@ -107,9 +109,14 @@ class JudgeController {
 	 * for the admin to use to create the new judge.
 	 */
     @Secured(['ROLE_ADMIN'])
-    def create() {
-        [judgeInstance: new Judge(params)]
-    }
+	def create(){
+		def result = judgeService.create(params)
+		if(!result.error){
+			return [judgeInstance: result.judgeInstance]
+		}
+		flash.message = message(code: result.error.code, args: result.error.args)
+		redirect(action: 'list')
+	}
 
 	/*
 	 * Save the judge using the values in the params list.
@@ -118,82 +125,94 @@ class JudgeController {
 	 * This role is used to secure certain pages/methods to only allow Judges who are logged in to view/use those pages/methods
 	 */
     @Secured(['ROLE_ADMIN'])
-    def save() {
-        def judgeInstance = new Judge(params)
-		judgeInstance.enabled = true
-        if (!judgeInstance.save(flush: true)) {
-            render(view: "create", model: [judgeInstance: judgeInstance])
-            return
-        }
-		def judgeRole = SecRole.findByAuthority("ROLE_JUDGE") ?: new SecRole(authority:"ROLE_JUDGE").save(flush:true)
-		SecUserSecRole.create judgeInstance,judgeRole
-
-        flash.message = message(code: 'default.created.message', args: [message(code: 'judge.label', default: 'Judge'), judgeInstance.id])
-        redirect(action: "show", id: judgeInstance.id)
-    }
+	def save() {
+		try{
+			def result = judgeService.save(params)
+			if (!result.error) {
+				flash.message = "Judge $result.judgeInstance.username, has been created!"
+				redirect(action: "show", id: result.judgeInstance?.id)
+				return
+			}
+			flash.message = message(code: result.error.code, args: result.error.args)
+			render(view: "create", model: [judgeInstance: result.judgeInstance])
+			return
+		}
+		catch(Exception e){
+			flash.message = message(code: "default.method.failure", args: ["Judge could not be created.","Verify correct data is being used in the fields below."])
+			render(view:'create', model:[judgeInstance:new Judge(params)])
+			return
+		}
+	}
 
 	/*
 	 * Show a specifically selected judge from the list that was generated from the list method.
 	 */
     @Secured(['ROLE_ADMIN'])
-    def show(Long id) {
-        def judgeInstance = Judge.get(id)
-        if (!judgeInstance) {
-            flash.message = message(code: 'default.not.found.message', args: [message(code: 'judge.label', default: 'Judge'), id])
-            redirect(action: "list")
-            return
-        }
-
-        [judgeInstance: judgeInstance]
-    }
+	def show(Long id) {
+		def result = judgeService.show(id)
+		if (!result.error) {
+			return [judgeInstance: result.judgeInstance]
+		}
+	   flash.message = message(code: result.error.code, args: result.error.args)
+	   redirect(action: "list")
+	   return
+	}
 
 	/*
 	 * Edit the judge that was found and displayed in the show function.
 	 */
-    @Secured(['ROLE_ADMIN'])
-    def edit(Long id) {
-        def judgeInstance = Judge.get(id)
-        if (!judgeInstance) {
-            flash.message = message(code: 'default.not.found.message', args: [message(code: 'judge.label', default: 'Judge'), id])
-            redirect(action: "list")
-            return
-        }
+	@Secured(['ROLE_ADMIN'])
+	def edit(Long id) {
+		def result = judgeService.edit(id)
+		if (!result.error) {
+			return [judgeInstance: result.judgeInstance]
+		}
+	   flash.message = message(code: result.error.code, args: result.error.args)
+	   redirect(action: "list")
+	   return
+	}
 
-        [judgeInstance: judgeInstance]
-    }
+	/*
+	 * Change a judge's password
+	 */
+	@Secured(['ROLE_ADMIN'])
+	def updatePassword(Long id) {
+		def result = judgeService.updatePassword(id)
+		if (!result.error) {
+			return [judgeInstance: result.judgeInstance]
+		}
+	   flash.message = message(code: result.error.code, args: result.error.args)
+	   redirect(action: "list")
+	   return
+	}
 
 	/*
 	 * Save the changes to a judge's record that were made using the edit method.
 	 */
     @Secured(['ROLE_ADMIN'])
-    def update(Long id, Long version) {
-        def judgeInstance = Judge.get(id)
-        if (!judgeInstance) {
-            flash.message = message(code: 'default.not.found.message', args: [message(code: 'judge.label', default: 'Judge'), id])
-            redirect(action: "list")
-            return
-        }
-
-        if (version != null) {
-            if (judgeInstance.version > version) {
-                judgeInstance.errors.rejectValue("version", "default.optimistic.locking.failure",
-                          [message(code: 'judge.label', default: 'Judge')] as Object[],
-                          "Another user has updated this Judge while you were editing")
-                render(view: "edit", model: [judgeInstance: judgeInstance])
-                return
-            }
-        }
-
-        judgeInstance.properties = params
-
-        if (!judgeInstance.save(flush: true)) {
-            render(view: "edit", model: [judgeInstance: judgeInstance])
-            return
-        }
-
-        flash.message = message(code: 'default.updated.message', args: [message(code: 'judge.label', default: 'Judge'), judgeInstance.id])
-        redirect(action: "show", id: judgeInstance.id)
-    }
+	def update(Long id, Long version) {
+		try{
+			def result = judgeService.update(id, version, params)
+			if(!result.error){
+				flash.message = message(code: 'default.updated.message', args: [message(code: 'judge.label', default: 'Judge'), params.id])
+				redirect(action:"show", id: id)
+				return
+			}
+			if(!result.judgeInstance) {
+				flash.message = message(code: result.error.code, args: result.error.args)
+				redirect(action: "list")
+				return
+			}
+			flash.message = message(code: result.error.code, args: result.error.args)
+			redirect(action: "edit", id: id)
+			return
+		}
+		catch(Exception e){
+			flash.message = message(code: "default.method.failure", args: ["Judge could not be updated.","Verify correct data is being used in the fields below."])
+			redirect(action: "edit", id: id)
+			return
+		}
+	}
 
 	/*
 	 * Delete the judge that was found and displayed in the show function.
@@ -202,48 +221,31 @@ class JudgeController {
 	 * It must be done in this order due to a foreign key restraint being enforced.  Deleting the judge first will fail.
 	 * If there is no judgeRole, remove any record from the SecUserSecRole table, regardless of the role(s) the record has.
 	 */
-    @Secured(['ROLE_ADMIN'])
-    def delete(Long id) {
-        def judgeInstance = Judge.get(id)
-        if (!judgeInstance) {
-            flash.message = message(code: 'default.not.found.message', args: [message(code: 'judge.label', default: 'Judge'), id])
-            redirect(action: "list")
-            return
-        }
-
-        try {
-			def judgeRole = SecRole.findByAuthority("ROLE_JUDGE")
-			if(judgeRole){
-				SecUserSecRole.remove judgeInstance,judgeRole
-				judgeInstance.delete(flush: true)
+	@Secured(['ROLE_ADMIN'])
+	def delete(Long id) {
+		try {
+			def result = judgeService.delete(id)
+			//Success
+			if(!result.error){
 				flash.message = message(code: 'default.deleted.message', args: [message(code: 'judge.label', default: 'Judge'), id])
 				redirect(action: "list")
+				return
 			}
-			else{
-				SecUserSecRole.removeAll judgeInstance
-				judgeInstance.delete(flush: true)
-				flash.message = message(code: 'default.deleted.message', args: [message(code: 'judge.label', default: 'Judge'), id])
+			//Could not find by id
+			if(!result.judgeInstance) {
+				flash.message = message(code: result.error.code, args: result.error.args)
 				redirect(action: "list")
+				return
 			}
-        }
-        catch (DataIntegrityViolationException e) {
-            flash.message = message(code: 'default.not.deleted.message', args: [message(code: 'judge.label', default: 'Judge'), id])
-            redirect(action: "show", id: id)
-        }
-    }
-
-	
-	/* For the getUser method
-	 * If you don't create a custom UserDetailsService, you will have to look up the user by username which is less efficient.
-	 * You must do this because it won't associate the id with the user that is authenticated if you use LDAP or something other than base authentication.
-	 * Since this application will have very few people logging in, efficiency should not be an issue.
-	 */
-	
-	/*
-	 * Return a reference to the SecUser that is logged in
-	 */
-	private getUser(){
-		def user = SecUser.findByUsername(springSecurityService.principal.username)
-		return user
+			//Found,could not delete
+			flash.message = message(code: result.error.code, args: result.error.args)
+			redirect(action: "show",id: id)
+			return
+		}
+		catch(Exception e) {
+			flash.message = message(code: "default.method.failure", args: ["Judge could not be deleted.",""])
+			redirect(action: "show", id: id)
+			return
+		}
 	}
 }

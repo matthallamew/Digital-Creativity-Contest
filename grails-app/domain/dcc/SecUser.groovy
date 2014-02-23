@@ -1,7 +1,5 @@
 package dcc
 
-import java.util.Date;
-
 class SecUser {
 
 	transient springSecurityService

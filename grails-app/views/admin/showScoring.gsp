@@ -15,6 +15,10 @@
 			</ul>
 		</div>
 		<div id="list-submission" class="content">
+			<g:if test="${flash.message}">
+			<div class="message" role="status">${flash.message}</div>
+			</g:if>
+
 			<h3>Choose a category to see the ranks</h3>
 			<table>
 				<tbody>
@@ -39,6 +43,9 @@
 							<tr>
 								<td>
 									Total Points:${submission.grandTotal}
+									<g:if test="${submission?.winner}">
+										&nbsp;&nbsp;&nbsp;<span class="winner">Winner</span>
+									</g:if>
 								</td>
 							</tr>
 						</g:each>

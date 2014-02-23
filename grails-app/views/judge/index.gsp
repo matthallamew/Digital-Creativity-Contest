@@ -24,9 +24,7 @@
 	  		<li><input type="button" onclick="location.href='/dcc/submission/list';" value="Browse the Submissions" /></li>
 	  		<li><input type="button" onclick="location.href='/dcc/judge/unrankedSubmissions';" value="Rank the Submissions" /></li>
   		</ul>
-	  	
 	  	<br />
 	  </div>
-
 	</body>
 </html>

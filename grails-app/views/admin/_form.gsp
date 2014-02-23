@@ -1,3 +1,4 @@
+<%@ page import="dcc.SecUser" %>
 <div class="fieldcontain ${hasErrors(bean: secUserInstance, field: 'username', 'error')} required">
 	<label for="username">
 		<g:message code="secUser.username.label" default="Username" />
@@ -61,4 +62,3 @@
 	</label>
 	<g:checkBox name="passwordExpired" value="${secUserInstance?.passwordExpired}" />
 </div>
-

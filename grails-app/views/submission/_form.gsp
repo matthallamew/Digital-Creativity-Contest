@@ -3,7 +3,6 @@
 		<g:message code="submission.category.label" default="Categroy:" />
 		<span class="required-indicator">*</span>
 	</label>
-<%--	<g:select name="category" from="${['Whatever','Cool','Impressive']}" value="${submissionInstance?.category}"/>--%>
 	<g:select id="category" name="category" from="${["Static","Multimedia","iPad"]}" noSelection="${['':'Select Category']}" value="${submissionInstance?.category}"/>
 </div>
 

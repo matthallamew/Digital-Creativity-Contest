@@ -6,7 +6,6 @@
 		<title><g:message code="default.show.label" args="[entityName]" /></title>
 	</head>
 	<body>
-		<a href="#show-secUser" class="skip" tabindex="-1"><g:message code="default.link.skip.label" default="Skip to content&hellip;"/></a>
 		<div class="nav" role="navigation">
 			<ul>
 				<li><a class="home" href="${createLink(uri: '/')}"><g:message code="default.home.label"/></a></li>
@@ -27,18 +26,14 @@
 				<g:if test="${secUserInstance?.username}">
 				<li class="fieldcontain">
 					<span id="username-label" class="property-label"><g:message code="secUser.username.label" default="Username" /></span>
-					
 						<span class="property-value" aria-labelledby="username-label"><g:fieldValue bean="${secUserInstance}" field="username"/></span>
-					
 				</li>
 				</g:if>
-			
+
 				<g:if test="${secUserInstance?.firstName}">
 				<li class="fieldcontain">
 					<span id="firstName-label" class="property-label"><g:message code="secUser.firstName.label" default="First Name" /></span>
-					
 						<span class="property-value" aria-labelledby="firstName-label"><g:fieldValue bean="${secUserInstance}" field="firstName"/></span>
-					
 				</li>
 				</g:if>
 			

@@ -4,14 +4,6 @@
 		<meta name="layout" content="main">
 		<g:set var="entityName" value="${message(code: 'rank.label', default: 'Rank')}" />
 		<title><g:message code="default.create.label" args="[entityName]" /></title>
-		<script type="text/javascript">
-		<!--
-			var updateTotal = function(){
-				var total = parseInt(document.myForm.skill.value) + parseInt(document.myForm.creativity.value) + parseInt(document.myForm.aesthetic.value) + parseInt(document.myForm.purpose.value);
-				document.myForm.total.value = total;
-			};
-		//-->
-		</script>
 	</head>
 	<body>
 		<a href="#create-rank" class="skip" tabindex="-1"><g:message code="default.link.skip.label" default="Skip to content&hellip;"/></a>

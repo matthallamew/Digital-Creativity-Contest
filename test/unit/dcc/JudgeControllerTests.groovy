@@ -1,151 +1,205 @@
 package dcc
 
-
-
 import org.junit.*
 import grails.test.mixin.*
 
 @TestFor(JudgeController)
-@Mock(Judge)
+@Mock([Judge,Submission,SecUser,SecRole,SecUserSecRole])
 class JudgeControllerTests {
+	
+	@Before
+	void setUp() {
+		controller.judgeService = new JudgeService()
+		Judge.metaClass.encodePassword = {'a'}
+	}
 
     def populateValidParams(params) {
         assert params != null
-        // TODO: Populate valid properties like...
-        //params["name"] = 'someValidName'
+		params["username"]='peterj'
+		params["password"] = 'a'
+		params["firstName"]='PeterJ'
+		params["lastName"]='Griffon'
+		params["password"]='pass'
+		params["enabled"]=true
+		params["authority"] = "ROLE_JUDGE"
+    }
+	
+    void testNoJudgesList() {
+        controller.list()
+		
+		assert Judge.count() == 0
+		assert response.redirectedUrl == "/judge/create"
     }
 
-    void testIndex() {
-        controller.index()
-        assert "/judge/list" == response.redirectedUrl
-    }
+	void test1JudgeList() {
+		populateValidParams(params)
+		Judge judge = new Judge(params)
+		judge.metaClass.encodePassword = {'b'}
+		judge.save(flush:true)
+		SecUser su = new SecUser(params)
+		su.metaClass.encodePassword = {'b'}
+		su.save(flush:true)
+		def model = controller.list()
+		
+		assert Judge.count() == 1
+		assert model.judgeInstanceTotal == 1
+	}
 
-    void testList() {
-
-        def model = controller.list()
-
-        assert model.judgeInstanceList.size() == 0
-        assert model.judgeInstanceTotal == 0
-    }
-
-    void testCreate() {
+	void testMultipleJudgesList() {
+		populateValidParams(params)
+		Judge judge = new Judge(params)
+		judge.metaClass.encodePassword = {'b'}
+		judge.save(flush:true)
+		params.username = "john"
+		Judge judge2 = new Judge(params)
+		judge2.metaClass.encodePassword = {'b'}
+		judge2.save(flush:true)
+		params.username = "eric"
+		Judge judge3 = new Judge(params)
+		judge3.metaClass.encodePassword = {'b'}
+		judge3.save(flush:true)
+		def model = controller.list()
+		
+		assert Judge.count() == 3
+		assert model.judgeInstanceTotal == 3
+	}
+    void testEmptyCreate() {
         def model = controller.create()
 
+		assert flash.message == null
         assert model.judgeInstance != null
     }
+	
+	void testPrefilledCreate() {
+		populateValidParams(params)
+		def model = controller.create()
+		
+		assert flash.message == null
+		assert model.judgeInstance != null
+		assert model.judgeInstance.username == 'peterj'
+	}
 
-    void testSave() {
+    void testInvalidSave() {
         controller.save()
 
         assert model.judgeInstance != null
         assert view == '/judge/create'
-
-        response.reset()
-
-        populateValidParams(params)
-        controller.save()
-
-        assert response.redirectedUrl == '/judge/show/1'
-        assert controller.flash.message != null
-        assert Judge.count() == 1
     }
 
-    void testShow() {
+    void testValidSave() {
+//        populateValidParams(params)
+		params.username='peterj'
+		params.password='a'
+		params.firstName='PeterJ'
+		params.lastName='Griffon'
+		params.enabled=true
+        controller.save()
+
+        assert flash.message != null
+        assert response.redirectedUrl == "/judge/show/1"
+        assert Judge.count() == 1
+		assert SecUserSecRole.count() == 1
+    }
+
+    void testInvalidShow() {
         controller.show()
 
         assert flash.message != null
         assert response.redirectedUrl == '/judge/list'
-
-        populateValidParams(params)
-        def judge = new Judge(params)
-
-        assert judge.save() != null
-
-        params.id = judge.id
-
-        def model = controller.show()
-
-        assert model.judgeInstance == judge
     }
+	
+	void testValidJudgeShow() {
+		populateValidParams(params)
+		def judge = new Judge(params)
+		assert judge.save(flush:true) != null
+		params.id = judge.id
+		def model = controller.show()
+
+		assert model.judgeInstance == judge
+		assert Judge.count() == 1
+	}
 
     void testEdit() {
         controller.edit()
 
         assert flash.message != null
         assert response.redirectedUrl == '/judge/list'
-
-        populateValidParams(params)
-        def judge = new Judge(params)
-
-        assert judge.save() != null
-
-        params.id = judge.id
-
-        def model = controller.edit()
-
-        assert model.judgeInstance == judge
     }
+	
+	void testValidEdit() {
+		populateValidParams(params)
+		def judge = new Judge(params)
+		assert judge.save(flush:true) != null
+		params.id = judge.id
+		def model = controller.edit()
 
-    void testUpdate() {
+		assert model.judgeInstance != null
+		assert model.judgeInstance == judge
+		assert model.judgeInstance.username == 'peterj'
+	}
+
+    void testInvalidUpdate() {
         controller.update()
 
         assert flash.message != null
         assert response.redirectedUrl == '/judge/list'
+    }
 
-        response.reset()
-
+    void testInvalidParamsInvalidUpdate() {
         populateValidParams(params)
         def judge = new Judge(params)
-
-        assert judge.save() != null
-
-        // test invalid parameters in update
+        assert judge.save(flush:true) != null
         params.id = judge.id
-        //TODO: add invalid values to params object
-
+		params.username = ''
         controller.update()
 
-        assert view == "/judge/edit"
-        assert model.judgeInstance != null
-
-        judge.clearErrors()
-
-        populateValidParams(params)
-        controller.update()
-
-        assert response.redirectedUrl == "/judge/show/$judge.id"
+        assert response.redirectedUrl == "/judge/edit/$params.id"
         assert flash.message != null
+    }
 
-        //test outdated version number
-        response.reset()
-        judge.clearErrors()
-
+    void testInvalidVersionInvalidUpdate() {
         populateValidParams(params)
+		def judge = new Judge(params).save(flush:true)
         params.id = judge.id
         params.version = -1
         controller.update()
 
-        assert view == "/judge/edit"
-        assert model.judgeInstance != null
-        assert model.judgeInstance.errors.getFieldError('version')
+        assert response.redirectedUrl == "/judge/edit/$params.id"
         assert flash.message != null
     }
 
-    void testDelete() {
+    void testValidParamsValidUpdate() {
+        populateValidParams(params)
+		def judge = new Judge(params)
+		judge.metaClass.encodePassword= {'b'}
+		judge.metaClass.isDirty = {false}
+		judge.save(flush:true,failOnError:true)
+		params.firstName = 'peat'
+		params.id = judge.id
+        controller.update()
+
+        assert response.redirectedUrl == "/judge/show/$judge.id"
+        assert flash.message != null
+		assert judge.firstName == 'peat'
+    }
+
+    void testNoJudgeInvalidDelete() {
         controller.delete()
+		
         assert flash.message != null
         assert response.redirectedUrl == '/judge/list'
+    }
 
-        response.reset()
-
+	void testJudgeValidDelete() {
         populateValidParams(params)
+		SecRole role = new SecRole(params).save(flush:true,failOnError:true)
         def judge = new Judge(params)
-
-        assert judge.save() != null
+		judge.metaClass.encodePassword = {'b'}
+		judge.metaClass.isDirty = {false}
+        assert judge.save(flush:true,failOnError:true) != null
+		SecUserSecRole.create judge,role
         assert Judge.count() == 1
-
         params.id = judge.id
-
         controller.delete()
 
         assert Judge.count() == 0

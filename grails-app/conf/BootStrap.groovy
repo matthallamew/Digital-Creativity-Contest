@@ -9,7 +9,7 @@ class BootStrap {
 
     def init = { servletContext ->
 		(1..25).each{
-			new Submission(category:"Whatever",title:"My Subbmission $it",author:"Author $it",link:"http://youtu.be/5L28TM48bF0",emailAddr:"email1@bvu.edu").save(flush:true)
+			new Submission(category:"Whatever",title:"My Subbmission $it",author:"Author $it",link:"http://youtu.be/5L28TM48bF0",emailAddr:"email1@domain.com").save(flush:true)
 		}
 
 		Judge j = new Judge(username:'peterj',password:'a',firstName:'PeterJ',lastName:'Griffon',enabled:true).save(flush:true)
@@ -21,7 +21,7 @@ class BootStrap {
 		def adminRole = SecRole.findByAuthority("ROLE_ADMIN") ?: new SecRole(authority:"ROLE_ADMIN").save(flush:true)
 		def judgeRole = SecRole.findByAuthority("ROLE_JUDGE") ?: new SecRole(authority:"ROLE_JUDGE").save(flush:true)
 
-		def admin = new SecUser(username:'mattw',password:'wootglock',firstName:'Matthew',lastName:'Wellendorf',enabled:true).save(flush:true)
+		def admin = new SecUser(username:'tsmith',password:'pssdubdd',firstName:'Todd',lastName:'Smith',enabled:true).save(flush:true)
 
 		SecUserSecRole.create admin,adminRole
 		SecUserSecRole.create j, judgeRole

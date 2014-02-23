@@ -5,232 +5,239 @@ import org.springframework.dao.DataIntegrityViolationException
 
 class AdminController {
 	
-	def springSecurityService
-	
-	/*
-	 * Grab a count of how many submissions are in the database.
-	 * Display this on the Admin homepage
-	 */
-	@Secured(['ROLE_ADMIN'])
-	def index(){
-		def submissions = Submission.count()
-		def subs = (submissions <= 0) ? "Submissions are " : (submissions > 1) ? "Submissions are " : "Submission is "
-		def sub = "$submissions $subs"
+	static allowedMethods = [save: "POST", update: "POST", delete: "POST"]
 
-		[submissionsText:sub]
+	def adminService
+
+	/*
+	 * Call index in adminService.
+	 * Display some text built in the service.
+	 * If there is an error, redirect to the landing page.
+	 */
+    @Secured(['ROLE_ADMIN'])
+    def index(){
+		def result = adminService.index() 
+		if(!result.error){
+			return [submissionsText:result.sub]
+		}
+		flash.message = message(code: result.error.code, args: result.error.args)
+		redirect(url:"/")
 	}
 
 	/*
-	 * Get all the submissions
-	 * Sort the submissions by category and then grandTotal
-	 * Display a unique list of all the categories in the database
-	 * Put the category list in the session so we don't have to keep querying the database to build the list
-	 * When a user clicks on one of the categories, query the database for any submission that has that category
-	 * Display the submissions found below the list of categories
+	 * Call showScoring method in adminService.
+	 * Return a list of categories and set a session variable in order to help reduce database reads.
+	 * Otherwise, return a list of categories and a list of submissions for the category that was chosen by the user.
 	 */
 	@Secured(['ROLE_ADMIN'])
 	def showScoring(){
-		if(params.category){
-			def categoryList = session.categoryList ?: Submission.withCriteria { projections{ distinct "category" }; ne "category",""; order "category";}
-			def submissionList = Submission.findAllByCategory("${params.category}")
-			def submissionListTotal = Submission.countByCategory("${params.category}")
-			submissionList.sort{ a,b ->
-				b.grandTotal <=> a.grandTotal ?:
-				a.dateCreated <=> b.dateCreated
-			}
-			params.max = Math.min( params.max ? params.max.toInteger() : 10,  100)
-			params.offset = Math.min( params.offset ? params.offset.toInteger() : 0,  100)
-			def start = params.offset
-			def fin = params.offset + params.max - 1 //must do this to make true max of 10 because .getAt() does an inclusive range
-			fin = (fin >= submissionListTotal) ? submissionListTotal - 1 : fin
-			submissionList = submissionList.getAt(start..fin)
-
-			[categoryList:categoryList,submissionList:submissionList,haveCategory:true,category:params.category,submissionListTotal:submissionListTotal]
+		def result = adminService.showScoring(params,session.categoryList)
+		if(!result.error) {
+			return [categoryList:result.categoryList,submissionList:result.submissionList,haveCategory:result.haveCategory,category:result.category,submissionListTotal:result.submissionListTotal]
 		}
-		else{
-			def categoryList = Submission.withCriteria {
-				projections{ distinct "category" }
-				ne "category",""
-				order "category"
-			}
-			session['categoryList'] = categoryList
-			[categoryList:categoryList]
-		}
+		flash.message = message(code: result.error.code, args: result.error.args)
+		redirect(action:'index')
 	}
-/*	def showScoring(){
-		if(params.category){
-			def categoryList = session.categoryList ?: Submission.withCriteria { projections{ distinct "category" }; ne "category",""; order "category";}
-			def submissionList = Submission.findAllByCategory("${params.category}",[max:params.max ?: 10,offset: params.offset?: 0])
-			def submissionListTotal = Submission.countByCategory("${params.category}")
-			submissionList.each{ a ->
-				def total = 0
-				a.ranks.total.each{ b ->
-					total += b.toInteger()
-				}
-				a.metaClass.grandTotal = total
-			}
-			submissionList.sort{ a,b ->
-				a.category <=> b.category ?:
-				b.grandTotal <=> a.grandTotal ?:
-				a.dateCreated <=> b.dateCreated
-			}
-			[categoryList:categoryList,submissionList:submissionList,haveCategory:true,category:params.category,submissionListTotal:submissionListTotal]
-		}
-		else{
-			def categoryList = Submission.withCriteria {
-				projections{ distinct "category" }
-				ne "category",""
-				order "category"
-			}
-			session['categoryList'] = categoryList
-			[categoryList:categoryList]
-		}
-	} */
 
 	/*
-	 * View an individual submission as an Admin
-	 * Not functionally different than the Submission controller's show method
-	 * Just makes it so the url is a little different, just to make it a little unique
+	 * Call showSubmission in adminService.
+	 * Return a submissionsInstance which will show more information about that particular submission.
+	 * If there are any errors, redirect to the showScoring page and display a message there about what went wrong.
 	 */
-	@Secured(['ROLE_ADMIN'])
+    @Secured(['ROLE_ADMIN'])
 	def showSubmission(Long id){
-		def submissionInstance = Submission.get(id)
-		if (!submissionInstance) {
-			flash.message = message(code: 'default.not.found.message', args: [message(code: 'submission.label', default: 'Submission'), id])
-			redirect(action: "showScoring")
+		def result = adminService.showSubmission(params?.id?.toLong())
+		if (!result.error) {
+			return [submissionInstance: result.submissionInstance]
+		}
+		flash.message = message(code: result.error.code, args: result.error.args)
+		redirect(action: "showScoring")
+	}
+
+	/*
+	 * Call updateWinnerStatus in adminService.
+	 * Find the submission and update the value of winner.
+	 * If there are any errors, redirect to the showSubmission page and display a message there about what went wrong.
+	 */
+    @Secured(['ROLE_ADMIN'])
+	def updateWinnerStatus(){
+		def result = adminService.updateWinnerStatus(params)
+		if (!result.error) {
+			flash.message = "Successfully updated winner status."
+			redirect(action: "showSubmission",id:result.submissionInstance?.id)
 			return
 		}
-		[submissionInstance: submissionInstance]
+		flash.message = message(code: result.error.code, args: result.error.args)
+		redirect(action: "showSubmission",id:result.submissionInstance?.id)
+		return
+	}
+
+	 /*
+	  * Update the grand_total of each submission to make it current 
+	  */
+    @Secured(['ROLE_ADMIN'])
+	def updateGrandTotal(){
+		def result = adminService.updateGrandTotal()
+		if (!result.error) {
+			flash.message = "Successfully updated grand total for each submission."
+			redirect(action: "index")
+			return
+		}
+		flash.message = message(code: result.error.code, args: result.error.args)
+		redirect(action: "index")
+		return
 	}
 
 	/*
-	 * Show a list of Admin's in the database
+	 * Call list in adminService to get a list of current Admins in the database.
+	 * If there are any errors, redirect to the admin homepage.
 	 */
 	@Secured(['ROLE_ADMIN'])
 	def list(Integer max,Integer offset) {
-		params.max = Math.min(max ?: 10, 100)
-		params.offset = Math.min(offset ?: 0, 100)
-		def role = SecRole.findByAuthority("ROLE_ADMIN")
-		def susr = SecUserSecRole.findAllBySecRole(role, [max: params.max ?: 10,offset: params.offset ?: 0])
-		def susrCount = SecUserSecRole.countBySecRole(role)
-		[secUserInstanceList: susr.secUser,secUserInstanceTotal:susrCount]
+		def result = adminService.list(max, offset, params)
+		if(result.secUserCount == 0) {
+			flash.message = "No Admins found.  Create a new admin."
+			redirect(action:'create')
+			return
+		}
+		else if(!result.error){
+			return [secUserInstanceList: result.secUser,secUserInstanceTotal:result.secUserCount]
+		}
+		flash.message = message(code: result.error.code, args: result.error.args)
+		redirect(action: "index")
 	}
 
 	/*
-	 * Create a new, blank secUserInstance to create an admin.
+	 * Call create in adminService
+	 * 
 	 */
 	@Secured(['ROLE_ADMIN'])
 	def create() {
-		[secUserInstance: new SecUser(params)]
+		def result = adminService.create(params)
+		if(!result.error){
+			return [secUserInstance: result.secUserInstance]
+		}
+		flash.message = message(code: result.error.code, args: result.error.args)
+		redirect(action:'list')
+		return
 	}
 
 	/*
-	 * Create a new secUserInstance and fill up the values from the
-	 * params list which are sent over by posting the form on the create page.
+	 * Call save in adminService.
+	 * If result has no errors, redirect to show the record just created.
+	 * If there are errors or there is an exception thrown,
+	 * render the create view with any values from the previous request.
 	 */
 	@Secured(['ROLE_ADMIN'])
 	def save() {
-		def secUserInstance = new SecUser(params)
-		if (!secUserInstance.save(flush: true)) {
-			render(view: "create", model: [secUserInstance: secUserInstance])
+		try{
+			def result = adminService.save(params)
+			if (!result.error) {
+				flash.message = "Admin $result.secUserInstance.username, has been created!"
+				redirect(action: "show", id: result?.secUserInstance?.id)
+				return
+			}
+			flash.message = message(code: result.error.code, args: result.error.args)
+			render(view: "create", model: [secUserInstance: result.secUserInstance])
 			return
 		}
-		def adminRole = SecRole.findByAuthority("ROLE_ADMIN") ?: new SecRole(authority:"ROLE_ADMIN").save(flush:true)
-		SecUserSecRole.create secUserInstance,adminRole
+		catch(Exception e){
+			flash.message = message(code: "default.method.failure", args: ["Administrator could not be created.","Verify you are using valid information in the fields below."])
+			render(view:'create', model:[secUserInstance:new SecUser(params)])
+			return
+		}
+	}
 
-		flash.message = "Admin $secUserInstance.username, has been created!"
-		redirect(action: "show", id: secUserInstance.id)
-	}
 	/*
-	 * Show an individual admin to show extra properties of the admin, edit the admin, or delete the admin
-	 */
-	@Secured(['ROLE_ADMIN'])
-	def show(Long id) {
-		def secUserInstance = SecUser.get(id)
-		if (!secUserInstance) {
-			flash.message = message(code: 'default.not.found.message', args: [message(code: 'admin.label', default: 'Admin'), id])
-			redirect(action: "list")
-			return
-		}
-		[secUserInstance: secUserInstance]
-	}
+ 	 * Call show in adminService.
+ 	 * Return an individual admin to show extra properties of the admin, edit the admin, or delete the admin
+ 	 */
+ 	@Secured(['ROLE_ADMIN'])
+ 	def show(Long id) {
+ 		def result = adminService.show(id)
+ 		if (!result.error) {
+			 return [secUserInstance: result.secUserInstance]
+ 		}
+		flash.message = message(code: result.error.code, args: result.error.args)
+		redirect(action: "list")
+		return
+ 	}
 
 	/*
 	 * Edit the admin that was chosen in the show method
 	 */
 	@Secured(['ROLE_ADMIN'])
 	def edit(Long id) {
-		def secUserInstance = SecUser.get(id)
-		if (!secUserInstance) {
-			flash.message = message(code: 'default.not.found.message', args: [message(code: 'admin.label', default: 'Admin'), id])
-			redirect(action: "list")
-			return
-		}
-		[secUserInstance: secUserInstance]
+ 		def result = adminService.edit(id)
+ 		if (!result.error) {
+			 return [secUserInstance: result.secUserInstance]
+ 		}
+		flash.message = message(code: result.error.code, args: result.error.args)
+		redirect(action: "list")
+		return
 	}
 
 	/*
-	 * Save any changes made to the admin from the edit method
+	 * Call update in adminService.
+	 * If there are no errors, redirect to show the record that was just updated.
+	 * If there are errors or an Exception is thrown, redirect to the edit stage.
 	 */
 	@Secured(['ROLE_ADMIN'])
 	def update(Long id, Long version) {
-		def secUserInstance = SecUser.get(id)
-		if (!secUserInstance) {
-			flash.message = message(code: 'default.not.found.message', args: [message(code: 'admin.label', default: 'Admin'), id])
-			redirect(action: "list")
-			return
-		}
-		if (version != null) {
-			if (secUserInstance.version > version) {
-				secUserInstance.errors.rejectValue("version", "default.optimistic.locking.failure",
-						  [message(code: 'admin.label', default: 'SecUser')] as Object[],
-						  "Another user has updated this Submission while you were editing")
-				render(view: "edit", model: [secUserInstance: secUserInstance])
+		try{
+			def result = adminService.update(id, version, params)
+			if(!result.error){
+				flash.message = message(code: 'default.updated.message', args: [message(code: 'admin.label', default: 'Admin'), params.id])
+				redirect(action:"show", id: id)
 				return
 			}
-		}
-		secUserInstance.properties = params
-		if (!secUserInstance.save(flush: true)) {
-			render(view: "edit", model: [secUserInstance: secUserInstance])
+			if(!result.secUserInstance) {
+				flash.message = message(code: result.error.code, args: result.error.args)
+				redirect(action: "list")
+				return
+			}
+			flash.message = message(code: result.error.code, args: result.error.args)
+			redirect(action: "edit", id: id)
 			return
 		}
-		flash.message = message(code: 'default.updated.message', args: [message(code: 'admin.label', default: 'Admin'), secUserInstance.id])
-		redirect(action: "show", id: secUserInstance.id)
-	}
+		catch(Exception e){
+			flash.message = message(code: "default.method.failure", args: ["Administrator could not be updated.","Verify correct data is being used in the fields below."])
+			redirect(action: "edit", id: id)
+			return
 
+		}
+	}
+	
 	/*
-	 * Find the admin in the SecUser table.
-	 * Find the adminRole.
-	 * Remove the record from the SecUserSecRole mapping table, then remove the admin from the SecUser table.
-	 * It must be done in this order due to a foreign key restraint being enforced.  Deleting the admin first will fail.
-	 * If there is no adminRole, remove any record related to that user from the SecUserSecRole table, regardless of the role(s) the record has.
+	 * Call delete in adminService.
+	 * If there are no errors, redirect to list to show the rest of the administrators.
+	 * If there are errors, redirect back to show.
 	 */
 	@Secured(['ROLE_ADMIN'])
 	def delete(Long id) {
-		def secUserInstance = SecUser.get(id)
-		if (!secUserInstance) {
-			flash.message = message(code: 'default.not.found.message', args: [message(code: 'admin.label', default: 'Admin'), id])
-			redirect(action: "list")
+		try {
+			def result = adminService.delete(id)
+			//Success
+			if(!result.error){
+				flash.message = message(code: 'default.deleted.message', args: [message(code: 'admin.label', default: 'Admin'), id])
+				redirect(action: "list")
+				return
+			}
+			//Could not find by id
+			if(!result.secUserInstance) {
+				flash.message = message(code: result.error.code, args: result.error.args)
+				redirect(action: "list")
+				return
+			}
+			//Found,could not delete
+			flash.message = message(code: result.error.code, args: result.error.args)
+			redirect(action: "show",id: id)
 			return
 		}
-		try {
-			def adminRole = SecRole.findByAuthority("ROLE_ADMIN")
-			if(adminRole){
-				SecUserSecRole.remove secUserInstance,adminRole
-				secUserInstance.delete(flush: true)
-				flash.message = message(code: 'default.deleted.message', args: [message(code: 'admin.label', default: 'Admin'), id])
-				redirect(action: "list")
-			}
-			else{
-				SecUserSecRole.removeAll secUserInstance
-				secUserInstance.delete(flush: true)
-				flash.message = message(code: 'default.deleted.message', args: [message(code: 'admin.label', default: 'Admin'), id])
-				redirect(action: "list")
-			}
-		}
-		catch (DataIntegrityViolationException e) {
-			flash.message = message(code: 'default.not.found.message', args: [message(code: 'admin.label', default: 'Admin'), id])
+		catch(Exception e) {
+			flash.message = message(code: "default.method.failure", args: ["Administrator could not be deleted.",""])			
 			redirect(action: "show", id: id)
+			return
 		}
 	}
 }

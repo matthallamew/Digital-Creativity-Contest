@@ -18,14 +18,27 @@
 	  <div class="content">
 	  	<h1>Administration Page</h1>
 	  	<br />
+		<g:if test="${flash.message}">
+		<div class="errors" role="errors">${flash.message}</div>
+		</g:if>	  	
 	  	<p>${submissionsText} in the database</p>
 	  	<br /><br />
-  		<ul>
-	  		<li><input type="button" onclick="location.href='/dcc/admin/list';" value="Show Curent Admins" /></li>
-	  		<li><input type="button" onclick="location.href='/dcc/judge/list';" value="Show Curent Judges" /></li>
-	  		<li><input type="button" onclick="location.href='/dcc/submission/list';" value="Show Submissions" /></li>
-	  		<li><input type="button" onclick="location.href='/dcc/admin/showScoring';" value="Show Scoring" /></li>
-  		</ul>
+  		<table>
+  			<tbody>
+   				<tr>
+  					<td><input class="button-normal" type="button" onclick="location.href='/dcc/admin/showScoring';" value="Show Scoring" /></td>
+  					<td><input class="button-normal" type="button" onclick="location.href='/dcc/admin/list';" value="Show Curent Admins" /></td>
+  				</tr>
+  				<tr>
+  					<td><input class="button-normal" type="button" onclick="location.href='/dcc/submission/list';" value="Show Submissions" /></td>
+  					<td><input class="button-normal" type="button" onclick="location.href='/dcc/judge/list';" value="Show Curent Judges" /></td>
+  				</tr>
+  				<tr>
+  					<td><input class="button-normal" type="button" onclick="location.href='/dcc/submissionArchive';" value="Submissions Archive" /></td>
+  					<td><input class="button-warn" type="button" onclick="location.href='/dcc/admin/updateGrandTotal';" value="Update Grand Total" /></td>
+  				</tr>
+  			</tbody>
+  		</table>
 	  </div>
 	</body>
 </html>

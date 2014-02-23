@@ -1,4 +1,3 @@
-
 <%@ page import="dcc.Judge" %>
 <!doctype html>
 <html>
@@ -8,7 +7,6 @@
 		<title><g:message code="default.show.label" args="[entityName]" /></title>
 	</head>
 	<body>
-		<a href="#show-judge" class="skip" tabindex="-1"><g:message code="default.link.skip.label" default="Skip to content&hellip;"/></a>
 		<div class="nav" role="navigation">
 			<ul>
 				<li><a class="home" href="${createLink(uri: '/')}"><g:message code="default.home.label"/></a></li>
@@ -67,27 +65,6 @@
 					<span id="passwordExpired-label" class="property-label"><g:message code="judge.passwordExpired.label" default="Password Expired" /></span>
 					<span class="property-value" aria-labelledby="passwordExpired-label"><g:fieldValue bean="${judgeInstance}" field="passwordExpired"/></span>
 				</li>
-
-<%--				<g:if test="${judgeInstance?.submission}">--%>
-<%--				<li class="fieldcontain">--%>
-<%--					<span id="submission-label" class="property-label"><g:message code="judge.submission.label" default="Submission" /></span>--%>
-<%--					--%>
-<%--						<span class="property-value" aria-labelledby="submission-label"><g:link controller="submission" action="show" id="${judgeInstance?.submission?.id}">${judgeInstance?.submission?.encodeAsHTML()}</g:link></span>--%>
-<%--					--%>
-<%--				</li>--%>
-<%--				</g:if>--%>
-<%--			--%>
-<%--				<g:if test="${judgeInstance?.ranks}">--%>
-<%--				<li class="fieldcontain">--%>
-<%--					<span id="ranks-label" class="property-label"><g:message code="judge.ranks.label" default="Ranks" /></span>--%>
-<%--					--%>
-<%--						<g:each in="${judgeInstance.ranks}" var="r">--%>
-<%--						<span class="property-value" aria-labelledby="ranks-label"><g:link controller="rank" action="show" id="${r.id}">${r?.encodeAsHTML()}</g:link></span>--%>
-<%--						</g:each>--%>
-<%--					--%>
-<%--				</li>--%>
-<%--				</g:if>--%>
-<%--			--%>
 			</ol>
 			<g:form>
 				<fieldset class="buttons">

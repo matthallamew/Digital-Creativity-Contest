@@ -11,9 +11,7 @@ class SecUserSecRole implements Serializable {
 		if (!(other instanceof SecUserSecRole)) {
 			return false
 		}
-
-		other.secUser?.id == secUser?.id &&
-			other.secRole?.id == secRole?.id
+		other.secUser?.id == secUser?.id && other.secRole?.id == secRole?.id
 	}
 
 	int hashCode() {
@@ -28,8 +26,12 @@ class SecUserSecRole implements Serializable {
 			[secUserId: secUserId, secRoleId: secRoleId]
 	}
 
-	static SecUserSecRole create(SecUser secUser, SecRole secRole, boolean flush = true) {
-		new SecUserSecRole(secUser: secUser, secRole: secRole).save(flush: flush, insert: true)
+	static boolean create(SecUser secUser, SecRole secRole, boolean flush = true) {
+		SecUserSecRole instance = new SecUserSecRole(secUser: secUser, secRole: secRole).save(flush: flush, insert: true)
+		if(!instance){
+			return false
+		}
+		return true
 	}
 
 	static boolean remove(SecUser secUser, SecRole secRole, boolean flush = true) {

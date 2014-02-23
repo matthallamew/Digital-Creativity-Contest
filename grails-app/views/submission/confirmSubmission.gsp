@@ -6,7 +6,6 @@
 		<title><g:message code="default.show.label" args="[entityName]" /></title>
 	</head>
 	<body>
-		<a href="#show-submission" class="skip" tabindex="-1"><g:message code="default.link.skip.label" default="Skip to content&hellip;"/></a>
 		<div class="nav" role="navigation">
 			<ul>
 				<li><a class="home" href="${createLink(uri: '/')}"><g:message code="default.home.label"/></a></li>
@@ -37,6 +36,15 @@
 					<span id="author-label" class="property-label"><g:message code="submission.author.label" default="Author" /></span>
 					
 						<span class="property-value" aria-labelledby="author-label"><g:fieldValue bean="${submissionInstance}" field="author"/></span>
+					
+				</li>
+				</g:if>
+			
+				<g:if test="${submissionInstance?.emailAddr}">
+				<li class="fieldcontain">
+					<span id="emailAddr-label" class="property-label"><g:message code="submission.emailAddr.label" default="Email" /></span>
+					
+						<span class="property-value" aria-labelledby="emailAddr-label"><g:fieldValue bean="${submissionInstance}" field="emailAddr"/></span>
 					
 				</li>
 				</g:if>

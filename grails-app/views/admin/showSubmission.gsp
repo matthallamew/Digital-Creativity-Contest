@@ -6,7 +6,6 @@
 		<title><g:message code="default.show.label" args="[entityName]" /></title>
 	</head>
 	<body>
-		<a href="#show-submission" class="skip" tabindex="-1"><g:message code="default.link.skip.label" default="Skip to content&hellip;"/></a>
 		<div class="nav" role="navigation">
 			<ul>
 				<li><a class="home" href="${createLink(uri: '/admin')}"><g:message code="default.home.label"/></a></li>
@@ -84,6 +83,14 @@
 					
 				</li>
 				</g:if>
+				<g:if test="${submissionInstance?.grandTotal}">
+				<li class="fieldcontain">
+					<span id="goals-label" class="property-label"><g:message code="submission.grandTotal.label" default="Total Score" /></span>
+					
+						<span class="property-value" aria-labelledby="goals-label"><g:fieldValue bean="${submissionInstance}" field="grandTotal"/></span>
+					
+				</li>
+				</g:if>
 				<g:if test="${submissionInstance?.ranks}">
 				<li class="fieldcontain">
 					<span id="submissions-label" class="property-label"><g:message code="submissions.ranks.label" default="Judges" /></span>
@@ -103,6 +110,21 @@
 				</li>
 				</g:else>
 			</ol>
+  			<g:form>
+				<fieldset class="form">
+					<div class="fieldcontain ${hasErrors(bean: submissionInstance, field: 'steps', 'error')} ">
+						<label for="steps">
+							<g:message code="submission.winner.label" default="Mark submission as a Winner" />
+						</label>
+						<g:checkBox name="winner" value="${submissionInstance.winner}"/>
+					</div>
+				</fieldset>
+				<fieldset class="buttons">
+					<g:hiddenField name="id" value="${submissionInstance?.id}" />
+					<g:hiddenField name="version" value="${submissionInstance?.version}" />
+					<g:actionSubmit class="edit" action="updateWinnerStatus" id="${submissionInstance?.id}" onclick="return confirm('Are you sure?');" value="Update Winner Status" />
+				</fieldset>
+			</g:form>
 		</div>
 	</body>
 </html>
