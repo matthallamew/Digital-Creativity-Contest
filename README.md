@@ -24,4 +24,5 @@ Users in this group are created by other administrators. The application calcula
 ##Future
 The cut-off date, among other variables, will be controlled by the administrator and live in a configuration table in the database.  Right now, these live in the Grails configuration file.
 
-Administrators have to manually send the winners an email from their own email client.  They should be able to email winners right from the application. 
+Administrators have to manually send the winners an email from their own email client.  They should be able to email winners right from the application.
+
