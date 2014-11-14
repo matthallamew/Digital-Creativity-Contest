@@ -24,31 +24,42 @@ class AppConfigController {
 
     @Secured(['ROLE_ADMIN'])
     def create() {
-        [appConfigInstance: new AppConfig(params)]
+        def result = appConfigService.create(params)
+        if(!result.error){
+            return [appConfigInstance: result.appConfigInstance]
+        }
+        flash.message = message(code:result.error.code,args:result.error.args)
+        redirect(action:'list')
     }
 
     @Secured(['ROLE_ADMIN'])
     def save() {
-        def appConfigInstance = new AppConfig(params)
-        if (!appConfigInstance.save(flush: true)) {
-            render(view: "create", model: [appConfigInstance: appConfigInstance])
+        try {
+            def result = appConfigService.save(params)
+            if(!result.error){
+                flash.message = message(code: 'default.created.message', args:[message(code: 'appConfig.label', default: 'Configuration Value'), result.appConfigInstance.configKey])
+                redirect(action:"show",id:result.appConfigInstance.id)
+                return
+            }
+            flash.message = message(code:result.error.code,args:result.error.args)
+            render(view:"create",model:[appConfigInstance:result.appConfigInstance])
+        }
+        catch(Exception e) {
+            flash.message = message(code:"default.method.failure", args:["Configuration value could not be created.","Verify correct is being used in the fields below."])
+            render(view: "create", model:[appConfigInstance: new AppConfig(params)])
             return
         }
-
-        flash.message = message(code: 'default.created.message', args: [message(code: 'appConfig.label', default: 'AppConfig'), appConfigInstance.id])
-        redirect(action: "show", id: appConfigInstance.id)
     }
 
     @Secured(['ROLE_ADMIN'])
     def show(Long id) {
-        def appConfigInstance = AppConfig.get(id)
-        if (!appConfigInstance) {
-            flash.message = message(code: 'default.not.found.message', args: [message(code: 'appConfig.label', default: 'AppConfig'), id])
-            redirect(action: "list")
-            return
+        def result = appConfigService.show(id)
+        if(!result.error){
+            return [appConfigInstance: result.appConfigInstance]
         }
-
-        [appConfigInstance: appConfigInstance]
+        flash.message = message(code: result.error.code,args: result.error.args)
+        redirect(action:'list')
+        return
     }
 
     @Secured(['ROLE_ADMIN'])

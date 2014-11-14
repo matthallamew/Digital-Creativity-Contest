@@ -40,6 +40,16 @@ class AppConfigControllerTests {
         assert model.appConfigInstanceList[0].configKey == "testKey"
     }
 
+    void test1ElementExtraParamsList() {
+        populateValidParams(params)
+        params.max2 = 10
+        new AppConfig(params).save(flush:true)
+        def model = controller.list()
+        assert model.appConfigInstanceList.size() == 1
+        assert model.appConfigInstanceTotal  == 1
+        assert model.appConfigInstanceList[0].configKey == "testKey"
+    }
+
     void testMoreThan1ElementList() {
         populateValidParams(params)
         new AppConfig(params).save(flush:true)
@@ -53,8 +63,8 @@ class AppConfigControllerTests {
 
     void testEmptyCreate() {
         def model = controller.create()
-
         assert model.appConfigInstance != null
+        assert model.appConfigInstance.count() == 0
     }
 
     void testPrefilledCreate() {
@@ -64,14 +74,25 @@ class AppConfigControllerTests {
         assert model.appConfigInstance.configKey == "testKey"
     }
 
-    void testSave() {
+    void testNoValuesInvalidSave() {
         controller.save()
 
         assert model.appConfigInstance != null
         assert view == '/appConfig/create'
+    }
 
-        response.reset()
+    void testInvalidValueInvalidSave() {
+        populateValidParams(params)
+        params.configKey = ""
+        controller.save()
 
+        assert view == '/appConfig/create'
+        assert model.appConfigInstance != null
+        assert controller.flash.message != null
+        assert AppConfig.count() == 0
+    }
+
+    void testValidSave() {
         populateValidParams(params)
         controller.save()
 
@@ -80,22 +101,23 @@ class AppConfigControllerTests {
         assert AppConfig.count() == 1
     }
 
-    void testShow() {
+    void testInvalidShow() {
         controller.show()
 
         assert flash.message != null
         assert response.redirectedUrl == '/appConfig/list'
+    }
 
+    void testValidShow() {
         populateValidParams(params)
         def appConfig = new AppConfig(params)
-
-        assert appConfig.save() != null
-
+        assert appConfig.save(flush:true) != null
         params.id = appConfig.id
-
         def model = controller.show()
 
         assert model.appConfigInstance == appConfig
+        assert flash.message == null
+        assert model.appConfigInstance.configKey == 'testKey'
     }
 
     void testEdit() {
