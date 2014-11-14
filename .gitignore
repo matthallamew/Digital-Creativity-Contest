@@ -17,7 +17,7 @@ local.properties
 .loadpath
 
 # web application files
-web-app/WEB-INF
+#web-app/WEB-INF
 
 # older plugin install locations
 /plugins
