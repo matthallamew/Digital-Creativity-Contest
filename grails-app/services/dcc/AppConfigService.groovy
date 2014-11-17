@@ -45,9 +45,47 @@ class AppConfigService {
     return result
   }
 
-//  def () {
-//    def result = [:]
-//    
-//  }
+  @Transactional
+  def edit (Long id) {
+    def result = [:]
+    result.appConfigInstance = AppConfig.get(id)
+    if(!result.appConfigInstance){
+      result.error = [code:"default.not.found.message",args:["Configuration Value",id]]
+    }
+    return result
+  }
+
+  @Transactional
+  def update(Long id,params) {
+    def result = [:]
+    result.appConfigInstance = AppConfig.get(id)
+    // not found
+    if(!result.appConfigInstance){
+      result.error = [code: "default.not.found.message",args:["Configuration Value",id]]
+      return result
+    }
+
+    result.appConfigInstance.properties = params
+
+    // could not save
+    if(result.appConfigInstance.hasErrors() || !result.appConfigInstance.save(flush:true)){
+      result.error = [code:"default.method.failure",args:["Could not update Configuration Value",""]]
+      return result
+    }
+    //success
+    return result
+  }
+
+  @Transactional
+  def delete(Long id) {
+    def result = [:]
+    result.appConfigInstance = AppConfig.get(id)
+    if(!result.appConfigInstance){
+      result.error = [code:"default.not.found.message",args:["Configuration Value",id]]
+      return result
+    }
+    result.appConfigInstance.delete(flush:true)
+    return result
+  }
 
 }

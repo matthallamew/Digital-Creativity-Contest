@@ -120,84 +120,80 @@ class AppConfigControllerTests {
         assert model.appConfigInstance.configKey == 'testKey'
     }
 
-    void testEdit() {
+    void testNoIDInvalidEdit() {
         controller.edit()
 
         assert flash.message != null
         assert response.redirectedUrl == '/appConfig/list'
+    }
 
+    void testInvalidIDInvalidEdit() {
         populateValidParams(params)
         def appConfig = new AppConfig(params)
+        assert appConfig.save(flush:true) != null
+        params.id = 999
+        controller.edit()
 
-        assert appConfig.save() != null
+        assert flash.message != null
+        assert response.redirectedUrl == '/appConfig/list'
+        assert params.id != appConfig.id
+    }
 
+    void testValidEdit() {
+        populateValidParams(params)
+        def appConfig = new AppConfig(params)
+        assert appConfig.save(flush:true) != null
         params.id = appConfig.id
-
         def model = controller.edit()
 
         assert model.appConfigInstance == appConfig
     }
 
-    void testUpdate() {
+    void testInvalidUpdate() {
         controller.update()
 
         assert flash.message != null
         assert response.redirectedUrl == '/appConfig/list'
+    }
 
-        response.reset()
-
+    void testInvalidParamsUpdate() {
         populateValidParams(params)
         def appConfig = new AppConfig(params)
-
-        assert appConfig.save() != null
-
-        // test invalid parameters in update
+        assert appConfig.save(flush:true) != null
         params.id = appConfig.id
-        //TODO: add invalid values to params object
-
+        params.configKey = ""
         controller.update()
 
         assert view == "/appConfig/edit"
         assert model.appConfigInstance != null
+    }
 
-        appConfig.clearErrors()
-
+    void testValidUpdate() {
         populateValidParams(params)
+        def appConfig = new AppConfig(params)
+        assert appConfig.save(flush:true) != null
+        assert appConfig.configValue == "Test Value"
+        params.configValue = "Updated Value"
+        params.id = appConfig.id
         controller.update()
 
         assert response.redirectedUrl == "/appConfig/show/$appConfig.id"
         assert flash.message != null
-
-        //test outdated version number
-        response.reset()
-        appConfig.clearErrors()
-
-        populateValidParams(params)
-        params.id = appConfig.id
-        params.version = -1
-        controller.update()
-
-        assert view == "/appConfig/edit"
-        assert model.appConfigInstance != null
-        assert model.appConfigInstance.errors.getFieldError('version')
-        assert flash.message != null
+        assert appConfig.configValue == "Updated Value"
     }
 
-    void testDelete() {
+    void testInvalidDelete() {
         controller.delete()
         assert flash.message != null
         assert response.redirectedUrl == '/appConfig/list'
+    }
 
-        response.reset()
-
+    void testValidDelete() {
         populateValidParams(params)
         def appConfig = new AppConfig(params)
-
-        assert appConfig.save() != null
+        assert appConfig.save(flush:true) != null
         assert AppConfig.count() == 1
-
         params.id = appConfig.id
-
         controller.delete()
 
         assert AppConfig.count() == 0
