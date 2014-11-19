@@ -16,6 +16,9 @@
 			<p>
 				If you have any questions or concerns, please email <a href="mailto:admin@fake.com?Subject=Submission%20Creation">admin@fake.com</a> or call 555.555.4321
 			</p>
+			<g:if test="${submitDisabled}">
+				<p>Submission entry has closed for this year.  Come back next year!</p>
+			</g:if>
 			<g:if test="${flash.message}">
 			<div class="message" role="status">${flash.message}</div>
 			</g:if>
@@ -35,5 +38,21 @@
 				</fieldset>
 			</g:form>
 		</div>
+		<g:if test="${submitDisabled}">
+		<script>
+			$(document).ready(function(){
+				$('input').each(function(){
+					$(this).attr("disabled",true);
+				});
+				$('input:submit').hide();
+				$('textarea').each(function(){
+					$(this).attr("disabled",true);
+				});
+				$('select').each(function(){
+					$(this).attr("disabled",true);
+				});
+			});
+		</script>
+		</g:if>
 	</body>
 </html>

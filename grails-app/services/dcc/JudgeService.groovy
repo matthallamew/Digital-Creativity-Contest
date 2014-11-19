@@ -14,7 +14,7 @@ class JudgeService {
 	*/
    def index(){
 	   def result = [:]
-	   def cutOffDate = grailsApplication.config.cutOffDate
+	   def cutOffDate = Date.parse("MM/dd/yyyy hh:mm:ss","${AppConfig?.findByConfigKey('cutOffDate')?.configValue ?: '01/01/1980 23:59:59'}")
 	   def submissions = Submission.countByDateCreatedLessThanEquals(cutOffDate)
 	   result.sub = (submissions <= 0) ? "There are $submissions Submissions total." : (submissions > 1) ? "There are $submissions Submissions total." : "There is $submissions Submission total."
 	   //Find all submissions that the currently logged in judge has not ranked.
@@ -29,7 +29,7 @@ class JudgeService {
 
    def unrankedSubmissions() {
 	   def result = [:]
-	   def cutOffDate = grailsApplication.config.cutOffDate
+	   def cutOffDate = Date.parse("MM/dd/yyyy hh:mm:ss","${AppConfig?.findByConfigKey('cutOffDate')?.configValue ?: '01/01/1980 23:59:59'}")
 	   //find all submissions that the currently logged in judge has not ranked
 	   result.submissionsList = Submission.executeQuery("SELECT s FROM Submission s WHERE s.dateCreated <= ? AND s NOT IN(SELECT r.submissions FROM Rank r WHERE r.judges = ?)",[cutOffDate,user])
 	   if(!result){

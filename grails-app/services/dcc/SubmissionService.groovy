@@ -38,9 +38,18 @@ class SubmissionService {
 	 @Transactional
 	 def create(params) {
 		 def result = [:]
+		 result.submitDisabled = false
+		 Date today = new Date()
+		 if(today > Date.parse("MM/dd/yyyy hh:mm:ss","${AppConfig?.findByConfigKey('cutOffDate')?.configValue ?: '01/01/1980 23:59:59'}")){ result.submitDisabled = true}
+		 result.submissionCategories = AppConfig?.findAllByConfigKey("submissionCategory")
+		 if(!result.submissionCategories){
+		 	result.error = [code:"default.method.failure",args:["Could not create a new Submission",""]]
+		 	return result
+		 }
 		 result.submissionInstance = new Submission(params)
 		 if(!result.submissionInstance){
 			 result.error = [code:"default.method.failure",args:["Could not create a new Submission.",""]]
+			 return result
 		 }
 		 return result
 	 }
@@ -52,6 +61,11 @@ class SubmissionService {
 	 @Transactional
 	 def save(params) {
 		 def result = [:]
+		 result.submissionCategories = AppConfig?.findAllByConfigKey("submissionCategory")
+		 if(!result.submissionCategories){
+		 	result.error = [code:"default.method.failure",args:["Could not create a new Submission",""]]
+		 	return result
+		 }
 		 result.submissionInstance = new Submission(params)
 		 if(result.submissionInstance.hasErrors() || !result.submissionInstance.save(flush: true)){
 			 result.error = [code:"default.method.failure",args:["Could not create new Submission",""]]

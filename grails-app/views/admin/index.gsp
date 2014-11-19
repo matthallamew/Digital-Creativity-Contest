@@ -37,6 +37,9 @@
   					<td><input class="button-normal" type="button" onclick="location.href='/dcc/submissionArchive';" value="Submissions Archive" /></td>
   					<td><input class="button-warn" type="button" onclick="location.href='/dcc/admin/updateGrandTotal';" value="Update Grand Total" /></td>
   				</tr>
+                          <tr>
+                            <td><input class="button-normal" type="button" onclick="location.href='/dcc/appConfig';" value="Configure Application" /></td>
+                          </tr>
   			</tbody>
   		</table>
 	  </div>

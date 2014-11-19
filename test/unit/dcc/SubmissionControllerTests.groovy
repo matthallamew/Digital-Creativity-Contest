@@ -3,24 +3,26 @@ import org.junit.*
 import grails.test.mixin.*
 
 @TestFor(SubmissionController)
-@Mock(Submission)
+@Mock([Submission,AppConfig])
 class SubmissionControllerTests {
 
     def populateValidParams(params) {
         assert params != null
-		params["category"] = "Cool"
-		params["title"] = "Great Project"
-		params["author"] = "Todd Dubb"
-		params["emailAddr"] = "mdub@email.com"
-		params["link"] = "https://coollinks.com"
+        params["category"] = "Cool"
+        params["title"] = "Great Project"
+        params["author"] = "Todd Dubb"
+        params["emailAddr"] = "mdub@email.com"
+        params["link"] = "https://coollinks.com"
+        new AppConfig(configKey:"submissionCategory",configValue:"Cool").save(flush:true)
+        params["category"] = AppConfig.findByConfigKeyAndConfigValue("submissionCategory","Cool")?.configValue
     }
 
 	@Before
 	void setUp() {
-			controller.submissionService = new SubmissionService()
+                controller.submissionService = new SubmissionService()
 	}
 	
-	void testIndex() {
+    void testIndex() {
         controller.index()
 
         assert "/submission/list" == response.redirectedUrl
@@ -78,7 +80,7 @@ class SubmissionControllerTests {
     void testEmptyCreate() {
         def model = controller.create()
 
-        assert model.submissionInstance != null
+        assert model == null
     }
 
     void testPrefilledParamsCreate() {
@@ -86,16 +88,23 @@ class SubmissionControllerTests {
         def model = controller.create()
 
         assert model.submissionInstance != null
-		assert controller.params.category == "Cool"
+        assert controller.params.category == "Cool"
     }
 
     void testNoValuesInvalidSave() {
         controller.save()
 
-        assert model.submissionInstance != null
+        assert model.submissionInstance == null
         assert view == '/submission/create'
     }
 	
+    void testNoValuesValidCategoryInvalidSave() {
+        new AppConfig(configKey:"submissionCategory",configValue:"Static").save(flush:true)
+        controller.save()
+
+        assert model.submissionInstance != null
+        assert view == '/submission/create'
+    }
 	void testInvalidValuesInvalidSave() {
         populateValidParams(params)
 		params.link = ""

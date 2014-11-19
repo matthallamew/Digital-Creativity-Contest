@@ -54,7 +54,7 @@ class SubmissionController {
     def create() {
 		def result = submissionService.create(params)
 		if(!result.error){
-			return [submissionInstance: result.submissionInstance]
+			return [submissionInstance: result.submissionInstance,submissionCategories:result.submissionCategories,submitDisabled:result.submitDisabled]
 		}
 		flash.message = message(code: result.error.code, args: result.error.args)
 		redirect(action: 'list')

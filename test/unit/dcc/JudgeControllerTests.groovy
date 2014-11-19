@@ -4,13 +4,27 @@ import org.junit.*
 import grails.test.mixin.*
 
 @TestFor(JudgeController)
-@Mock([Judge,Submission,SecUser,SecRole,SecUserSecRole])
+@Mock([Judge,Submission,SecUser,SecRole,SecUserSecRole,AppConfig])
 class JudgeControllerTests {
 	
 	@Before
 	void setUp() {
-		controller.judgeService = new JudgeService()
-		Judge.metaClass.encodePassword = {'a'}
+        controller.judgeService = new JudgeService()
+        Judge.metaClass.encodePassword = {'a'}
+        // params["username"]='chrisg'
+        // params["password"] = 'a'
+        // params["firstName"]='Chris'
+        // params["lastName"]='Griffon'
+        // params["password"]='pass'
+        // params["enabled"]=true
+        // params["authority"] = "ROLE_JUDGE"
+        // def loggedInUser = new Judge(params).save(flush:true)
+        // def springSecurityService =[ encodePassword: 'password',
+        //                   reauthenticate: { String u -> true},
+        //                   loggedIn: true,
+        //                   principal: loggedInUser]
+        // controller.judgeService.springSecurityService = springSecurityService
+        // println loggedInUser
 	}
 
     def populateValidParams(params) {
@@ -22,8 +36,10 @@ class JudgeControllerTests {
 		params["password"]='pass'
 		params["enabled"]=true
 		params["authority"] = "ROLE_JUDGE"
+            new AppConfig(configKey:"cutOffDate",configValue:"04/26/2015 23:59:59").save(flush:true)
+            params["cutOffDate"] = AppConfig.findByConfigKey("cutOffDate")?.configValue
     }
-	
+    
     void testNoJudgesList() {
         controller.list()
 		

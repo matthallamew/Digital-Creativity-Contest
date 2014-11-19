@@ -3,7 +3,7 @@
 		<g:message code="submission.category.label" default="Categroy:" />
 		<span class="required-indicator">*</span>
 	</label>
-	<g:select id="category" name="category" from="${["Static","Multimedia","iPad"]}" noSelection="${['':'Select Category']}" value="${submissionInstance?.category}"/>
+	<g:select id="category" name="category" from="${submissionCategories.configValue}" noSelection="${['':'Select Category']}" value="${submissionInstance?.category}"/>
 </div>
 
 <div class="fieldcontain ${hasErrors(bean: submissionInstance, field: 'title', 'error')} required">
