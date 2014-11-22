@@ -41,11 +41,12 @@ grails.project.dependency.resolution = {
         // specify dependencies here under either 'build', 'compile', 'runtime', 'test' or 'provided' scopes eg.
 
         // runtime 'mysql:mysql-connector-java:5.1.22'
+        test "org.spockframework:spock-grails-support:0.7-groovy-2.0"
     }
 
     plugins {
-		compile ":spring-security-core:1.2.7.3"
-		//compile ":spring-security-ldap:1.0.6"
+        compile ":spring-security-core:1.2.7.3"
+        //compile ":spring-security-ldap:1.0.6"
 				
         runtime ":hibernate:$grailsVersion"
         runtime ":jquery:1.8.3"
@@ -60,5 +61,10 @@ grails.project.dependency.resolution = {
         build ":tomcat:$grailsVersion"
 
         compile ':cache:1.0.1'
+        compile ":build-test-data:2.2.2"
+
+        test(":spock:0.7") {
+            exclude "spock-grails-support"
+        }
     }
 }
