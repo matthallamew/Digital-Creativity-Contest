@@ -182,7 +182,7 @@ class AdminService {
 	 */
 	def show(Long id) {
 		def result = [:]
-		result.secUserInstance = SecUser.load(id)
+		result.secUserInstance = SecUser.read(id)
 		if (!result.secUserInstance) {
 			result.error = [code:'default.not.found.message',args:['Admin',id]]
 		}

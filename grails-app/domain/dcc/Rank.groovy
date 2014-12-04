@@ -15,7 +15,7 @@ class Rank {
 	
 	static belongsTo = [judges:Judge,submissions:Submission]
 	
-    static constraints = {
+	static constraints = {
 		skill range:1..6
 		skillComment nullable:true,maxSize: 1000
 		creativity  range:1..6

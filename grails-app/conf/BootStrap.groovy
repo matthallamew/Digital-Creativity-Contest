@@ -20,7 +20,6 @@ class BootStrap {
 				//Judge j = Judge.findByUsername('peterj')
 				Submission s1 = Submission.get(1)
 				new Rank(skill:6,creativity:6,aesthetic:6,purpose:6,total:24,submissions:s1,judges:j).save(flush:true)
-				new Rank(skill:6,creativity:6,aesthetic:6,purpose:6,total:24,submissions:s1,judges:j).save(flush:true)
 
 				def adminRole = SecRole.findByAuthority("ROLE_ADMIN") ?: new SecRole(authority:"ROLE_ADMIN").save(flush:true)
 				def judgeRole = SecRole.findByAuthority("ROLE_JUDGE") ?: new SecRole(authority:"ROLE_JUDGE").save(flush:true)

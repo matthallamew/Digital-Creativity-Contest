@@ -77,15 +77,21 @@ class AdminController {
 	  */
     @Secured(['ROLE_ADMIN'])
 	def updateGrandTotal(){
-		def result = adminService.updateGrandTotal()
-		if (!result.error) {
-			flash.message = "Successfully updated grand total for each submission."
+		try{
+			def result = adminService.updateGrandTotal()
+			if (!result.error) {
+				flash.message = "Successfully updated grand total for each submission."
+				redirect(action: "index")
+				return
+			}
+			flash.message = message(code: result.error.code, args: result.error.args)
 			redirect(action: "index")
+			return			
+		} catch(Exception e){
+			flash.message = "Could not update grand total for each submission."
+			redirect(action:"index")
 			return
 		}
-		flash.message = message(code: result.error.code, args: result.error.args)
-		redirect(action: "index")
-		return
 	}
 
 	/*
